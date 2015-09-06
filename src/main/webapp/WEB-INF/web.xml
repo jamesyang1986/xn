@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+	version="2.4">
+	<display-name>xiaonei</display-name>
+	
+	 <context-param>
+      <param-name>log4jConfigLocation</param-name>
+      <param-value>classpath:log4j.properties</param-value>
+   </context-param>
+   <context-param>
+      <param-name>log4jRefreshInterval</param-name>
+      <param-value>6000</param-value>
+   </context-param>
+    <listener>
+      <listener-class>
+        org.springframework.web.util.Log4jConfigListener
+      </listener-class>
+   </listener>
+   
+     <listener>
+      <listener-class>
+        com.xiaonei.web.StartUpListener
+      </listener-class>
+   </listener>
+   
+    
+    
+	<servlet>
+		<servlet-name>push</servlet-name>
+		<servlet-class>com.xiaonei.web.PushServlet</servlet-class>   <!--Servlet的类 -->
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>push</servlet-name>
+		<url-pattern>/push</url-pattern>                   <!--映射的url路径 -->
+	</servlet-mapping>
+	
+	<servlet>
+        <servlet-name>notify</servlet-name>
+        <servlet-class>com.xiaonei.web.NotifyServlet</servlet-class>   <!--Servlet的类 -->
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>notify</servlet-name>
+        <url-pattern>/notify</url-pattern>                   <!--映射的url路径 -->
+    </servlet-mapping>
+
+	<servlet>
+		<servlet-name>match</servlet-name>
+		<servlet-class>com.xiaonei.web.UserMatchServlet</servlet-class>   <!--Servlet的类 -->
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>match</servlet-name>
+		<url-pattern>/match</url-pattern>                   <!--映射的url路径 -->
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>rec</servlet-name>
+		<servlet-class>com.xiaonei.web.UserRecServlet</servlet-class>   <!--Servlet的类 -->
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>rec</servlet-name>
+		<url-pattern>/rec</url-pattern>                   <!--映射的url路径 -->
+	</servlet-mapping>
+
+	<welcome-file-list>
+		<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>
+
+</web-app>

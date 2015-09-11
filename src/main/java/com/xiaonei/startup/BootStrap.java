@@ -66,7 +66,7 @@ public class BootStrap {
 
                 }
             }
-        }, 0, 30, TimeUnit.MINUTES);
+        }, 0, 60, TimeUnit.MINUTES);
     }
 
     public static void main(String[] args) {

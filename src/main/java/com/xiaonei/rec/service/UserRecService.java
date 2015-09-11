@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import redis.clients.jedis.Jedis;
 
@@ -28,6 +29,7 @@ import com.xiaonei.pojo.UserTags;
 import com.xiaonei.pojo.XnUser;
 
 public class UserRecService {
+    private Logger logger = Logger.getLogger(UserRecService.class);
     private UserDao userDao = new UserDao();
     private UserShowDao showDao = new UserShowDao();
 
@@ -90,24 +92,27 @@ public class UserRecService {
             XnUser originalUser = users.get(0);
 
             UserPushSetting setting = originalUser.getPushSetting();
-            if (setting == null) {
-                setting = new UserPushSetting();
-                setting.setHometown("all");
-                setting.setCity("all");
-                setting.setAstrology("all");
-                setting.setProvince("all");
-                setting.setArea("all");
-                setting.setUid(originalUser.getId());
+            if (setting == null || setting.getPush_flag() != 1) {
+                return resultList;
             }
 
-            setting.setHometown("all");
-            setting.setCity("all");
-            setting.setAstrology("all");
-            setting.setProvince("all");
-            setting.setArea("all");
+            // if (setting == null) {
+            // setting = new UserPushSetting();
+            // setting.setHometown("all");
+            // setting.setCity("all");
+            // setting.setAstrology("all");
+            // setting.setProvince("all");
+            // setting.setArea("all");
+            // setting.setUid(originalUser.getId());
+            // }
+            //
+            // setting.setHometown("all");
+            // setting.setCity("all");
+            // setting.setAstrology("all");
+            // setting.setProvince("all");
+            // setting.setArea("all");
 
             List<XnUser> recUsers = userDao.getCondition(setting);
-
             Map<String, String> idMap = showDao.getShowIds(userId);
 
             for (XnUser targetUser : recUsers) {
@@ -293,7 +298,7 @@ public class UserRecService {
                             || Double.isInfinite(simValue)) {
                         simValue = 0;
                     } else {
-//                        System.out.println("===:" + word1 + "===" + word2);
+                        // System.out.println("===:" + word1 + "===" + word2);
                     }
                 }
                 totalSimValue += simValue;

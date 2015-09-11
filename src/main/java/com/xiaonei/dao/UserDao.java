@@ -15,6 +15,7 @@ import javax.sql.DataSource;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.xiaonei.db.utils.Constants;
 import com.xiaonei.db.utils.DataSourceFactory;
 import com.xiaonei.pojo.UserPushSetting;
 import com.xiaonei.pojo.XnUser;
@@ -137,6 +138,9 @@ public class UserDao {
         // sql.append(" and u.id not in ( select follower_id  from followers where  following_id = "
         // + pushSetting.getUid() + ") ");
 
+        sql.append(" and u.id not in ( select blocked_id  from blockeds  where user_id = "
+                + pushSetting.getUid() + ") ");
+
         String gender = pushSetting.getGender();
         String astrology = pushSetting.getAstrology();
         String city = pushSetting.getCity();
@@ -164,7 +168,12 @@ public class UserDao {
         }
 
         if (!StringUtils.isEmpty(hometown) && !"all".equals(hometown)) {
-            sql.append(" and u.hometown = '" + hometown + "' ");
+            String[] tmps = hometown.split(Constants.WORD_SPLIT_CHAR);
+            for (String key : tmps) {
+                if (StringUtils.isEmpty(key) || "all".equals(key))
+                    continue;
+                sql.append(" and u.hometown like '%" + key + "%' ");
+            }
         }
 
         if (!StringUtils.isEmpty(area) && !"all".equals(area)) {

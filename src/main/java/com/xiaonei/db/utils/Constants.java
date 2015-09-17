@@ -6,7 +6,11 @@ public class Constants {
     public static final String USER_ONLINE_NOTIFY_QUEUE_NAME = "user_online_notify";
     public static final String WORD_SPLIT_CHAR = "\\|\\|";
 
-    public static final int MAX_USER_REC_COUNT = 10;
+    public static int MAX_USER_REC_COUNT = 1;
 
-    public static final int EXPIRE_TIME = (int) (0.1 * 3600);
+    public static int EXPIRE_TIME = (int) (12 * 3600);
+
+    public static int REC_USER_LAST_TIME = 15;
+
+    public static int REC_USER_LOOP_TIME = 10;
 }

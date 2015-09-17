@@ -1,12 +1,14 @@
 package com.xiaonei.dao;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,13 +16,16 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import com.xiaonei.db.utils.Constants;
 import com.xiaonei.db.utils.DataSourceFactory;
+import com.xiaonei.db.utils.JsonUtils;
 import com.xiaonei.pojo.UserPushSetting;
 import com.xiaonei.pojo.XnUser;
 
 public class UserDao {
+    private static Logger logger = Logger.getLogger(UserDao.class);
 
     private UserTagDao tagDao = new UserTagDao();
     private UserPushSettingDao pushSettingDao = new UserPushSettingDao();
@@ -126,14 +131,19 @@ public class UserDao {
     }
 
     public List<XnUser> getCondition(UserPushSetting pushSetting) {
+
         long t1 = System.currentTimeMillis();
+        String rec_date = genDate();
+
         StringBuilder sql = new StringBuilder(
                 " select * from `users` u , user_tags t  where u.id = t.user_id ");
 
         sql.append(" and u.id != " + pushSetting.getUid() + "  ");
-
-        // sql.append(" and u.id  not in ( select following_id from followers where follower_id= "
-        // + pushSetting.getUid() + ") ");
+        
+        sql.append(" and u.updated_at >= '" + rec_date + "'  ");
+//
+//        sql.append(" and u.id  not in ( select following_id from followers where follower_id= "
+//                + pushSetting.getUid() + ") ");
         //
         // sql.append(" and u.id not in ( select follower_id  from followers where  following_id = "
         // + pushSetting.getUid() + ") ");
@@ -141,13 +151,15 @@ public class UserDao {
         sql.append(" and u.id not in ( select blocked_id  from blockeds  where user_id = "
                 + pushSetting.getUid() + ") ");
 
+        sql.append(" and u.id not in ( select user_id from user_settings where field_name = 'online_mode' and field_val='3' "
+                + ") ");
+
         String gender = pushSetting.getGender();
         String astrology = pushSetting.getAstrology();
         String city = pushSetting.getCity();
 
         String area = pushSetting.getArea();
         String hometown = pushSetting.getHometown();
-
         String province = pushSetting.getProvince();
 
         if (!StringUtils.isEmpty(gender) && !"all".equals(gender)
@@ -238,8 +250,10 @@ public class UserDao {
                 xnUser.setTag(tagDao.getTagById(uid + ""));
                 recUsers.add(xnUser);
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("fail to exceute sql uid is:" + pushSetting.getUid(),
+                    e);
         } finally {
             if (conn != null) {
                 try {
@@ -252,9 +266,21 @@ public class UserDao {
 
         long t2 = System.currentTimeMillis();
 
-        System.out.println(" user query by seting " + " it cost:" + (t2 - t1)
-                + " the sql is:" + sql.toString());
+        logger.info("the userid is: " + pushSetting.getUid() + " it cost:"
+                + (t2 - t1) + " result num is:" + recUsers.size()
+                + " pushsetting is:  " + JsonUtils.toJSON(pushSetting)
+                + "  the sql is:   " + sql.toString());
         return recUsers;
+    }
+
+    private String genDate() {
+        long t1 = System.currentTimeMillis();
+        SimpleDateFormat smf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date());
+        c.add(Calendar.MINUTE, -1 * Constants.REC_USER_LAST_TIME);
+        String date = smf.format(c.getTime());
+        return date;
     }
 
     private void parseSettingSql(String tag, String field, StringBuilder sql) {
@@ -311,9 +337,9 @@ public class UserDao {
 
             pst.setString(18, xnUser.getLng());
             pst.setString(19, xnUser.getLat());
-            pst.setDate(20, new Date(System.currentTimeMillis()));
-            pst.setDate(21, new Date(System.currentTimeMillis()));
-            pst.setDate(22, new Date(System.currentTimeMillis()));
+            pst.setDate(20, new java.sql.Date(System.currentTimeMillis()));
+            pst.setDate(21, new java.sql.Date(System.currentTimeMillis()));
+            pst.setDate(22, new java.sql.Date(System.currentTimeMillis()));
 
             pst.setString(23, xnUser.getPassWord());
             pst.executeUpdate();

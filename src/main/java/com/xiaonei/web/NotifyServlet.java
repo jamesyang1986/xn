@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
 import com.xiaonei.dao.UserDao;
@@ -22,6 +23,8 @@ import com.xiaonei.pojo.XnUser;
 import com.xiaonei.rec.service.PushService;
 
 public class NotifyServlet extends HttpServlet {
+
+    private Logger logger = Logger.getLogger(PushServlet.class);
     private PushService service = new PushService();
     private UserDao userDao = new UserDao();
 
@@ -41,6 +44,16 @@ public class NotifyServlet extends HttpServlet {
         String uid = request.getParameter("uid");
         String nids = request.getParameter("nids");
 
+        genNotify(result, uid, nids);
+        String value = JsonUtils.toJSON(result);
+
+        logger.info("finish notify request: the uid is:" + uid + " nids is"
+                + nids + " the result is:" + value);
+        out.println(value.toString());
+        out.close();
+    }
+
+    public void genNotify(Map<String, Object> result, String uid, String nids) {
         Map<String, String> paramMap = new HashMap<String, String>();
         paramMap.put("id", uid);
 
@@ -49,31 +62,20 @@ public class NotifyServlet extends HttpServlet {
             result.put("ec", 500);
             result.put("em", "the user is not exists:" + uid);
         } else {
-
             XnUser originUser = users.get(0);
-            String push_content = "" + originUser.getNickname()
-                    + "上线了";
+            String push_content = "提示：" + originUser.getNickname() + "上线了";
 
             Map<String, String> options = new HashMap<String, String>();
             options.put("nid", uid);
+            options.put("type", "1");
 
             Map<String, String> result1 = new HashMap<String, String>();
             if (!StringUtils.isEmpty(uid) && !StringUtils.isEmpty(nids)) {
                 String[] ids = nids.split(",");
                 for (String nid : ids) {
                     try {
-                        PushCommand command = new PushCommand();
-                        command.setContent(push_content);
-                        command.setUid(nid);
-                        command.setType(push_content);
-                        command.setPlatformType(PlatformType.all);
-                        command.setAlias(nid);
-
-                        if (options.size() > 0) {
-                            command.setOptions(options);
-                        }
-                        service.pushUserNotice(command);
-                        result1.put(nid, "1");
+                        options.put("userid", nid);
+                        sendNotify(push_content, options, result1, nid);
                     } catch (Exception e) {
                         result1.put(nid, "0");
                     }
@@ -81,10 +83,27 @@ public class NotifyServlet extends HttpServlet {
             }
             result.put("result", result1);
         }
-       
-        String value = JsonUtils.toJSON(result);
-        out.println(value.toString());
-        out.close();
+    }
+
+    private void sendNotify(String push_content, Map<String, String> options,
+            Map<String, String> result1, String uid) throws Exception {
+        PushCommand command = new PushCommand();
+        command.setContent(push_content);
+        command.setUid(uid);
+        command.setType("1");
+        command.setPlatformType(PlatformType.all);
+        command.setAlias(uid);
+
+        if (options.size() > 0) {
+            command.setOptions(options);
+        }
+        service.pushUserNotice(command);
+        result1.put(uid, "1");
+    }
+
+    public static void main(String[] args) {
+        NotifyServlet notify = new NotifyServlet();
+        notify.genNotify(new HashMap<String, Object>(), "17", "23,16");
     }
 
 }

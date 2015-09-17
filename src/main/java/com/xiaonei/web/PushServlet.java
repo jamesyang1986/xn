@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
 import com.xiaonei.pojo.PlatformType;
@@ -20,6 +21,8 @@ import com.xiaonei.rec.service.PushService;
 
 public class PushServlet extends HttpServlet {
     private PushService service = new PushService();
+    
+    private Logger logger = Logger.getLogger(PushServlet.class);
 
     protected void service(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {

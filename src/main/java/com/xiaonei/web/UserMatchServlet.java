@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import com.xiaonei.dao.UserShowDao;
 import com.xiaonei.db.utils.JsonUtils;
@@ -23,6 +24,8 @@ public class UserMatchServlet extends HttpServlet {
     private UserRecService service = new UserRecService();
     private UserShowDao showDao = new UserShowDao();
 
+    private Logger logger = Logger.getLogger(UserMatchServlet.class);
+
     protected void service(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         doPost(req, resp);
@@ -31,17 +34,16 @@ public class UserMatchServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException {
-       
-        Map<String, Object> result = null;
+
+        Map<String, Object> result = new HashMap<String, Object>();
+        String uid = "";
         try {
-            result = new HashMap<String, Object>();
-            String uid = request.getParameter("uid");
+            uid = request.getParameter("uid");
             String num = request.getParameter("num");
             int total = 20;
             if (StringUtils.isEmpty(num)) {
                 total = Integer.parseInt(num);
             }
-          
             List<MatchResult> results = service.genRecUserResult(uid, total);
             result.put("result", results);
             result.put("num", results.size());
@@ -53,7 +55,6 @@ public class UserMatchServlet extends HttpServlet {
             if (ids.size() > 0) {
                 showDao.show(uid, ids);
             }
-
         } catch (Exception e) {
             result.put("ec", 500);
             result.put("em", "the match result is error:" + e.getMessage());
@@ -62,6 +63,9 @@ public class UserMatchServlet extends HttpServlet {
         String value = JsonUtils.toJSON(result);
         response.setContentType("application/json;charset=UTF-8");
         PrintWriter out = response.getWriter();
+        
+        logger.info("finish to match user for uid:" + uid + "the result is:"
+                + value.toString());
         out.println(value.toString());
         out.close();
     }

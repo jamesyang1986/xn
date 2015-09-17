@@ -1,5 +1,8 @@
 package com.xiaonei.startup;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 
 import com.xiaonei.dao.UserDao;
+import com.xiaonei.db.utils.Constants;
 import com.xiaonei.pojo.MatchResult;
 import com.xiaonei.pojo.PlatformType;
 import com.xiaonei.pojo.PushCommand;
@@ -27,7 +31,7 @@ public class BootStrap {
     public static void start() {
         final ScheduledExecutorService esa = Executors
                 .newScheduledThreadPool(2);
-        esa.scheduleAtFixedRate(new Runnable() {
+        esa.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 List<String> uids = userDao.getAllUser(null);
@@ -41,8 +45,8 @@ public class BootStrap {
                                                 Integer.MAX_VALUE);
                                 if (resultList != null && resultList.size() > 0) {
                                     PushCommand command = new PushCommand();
-                                    command.setContent("" + resultList.size()
-                                            + "位符合条件的新用户");
+                                    command.setContent("最新推送："
+                                            + resultList.size() + "位符合条件的新用户");
                                     command.setUid(userId);
                                     command.setType("2");
                                     command.setPlatformType(PlatformType.all);
@@ -66,10 +70,35 @@ public class BootStrap {
 
                 }
             }
-        }, 0, 60, TimeUnit.MINUTES);
+        }, 1, Constants.REC_USER_LOOP_TIME, TimeUnit.MINUTES);
+    }
+
+    private static String genDate() {
+        long t1 = System.currentTimeMillis();
+        SimpleDateFormat smf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date());
+        c.add(Calendar.MINUTE, -15);
+        String date = smf.format(c.getTime());
+        return date;
     }
 
     public static void main(String[] args) {
         start();
+    }
+
+    private static void test() {
+        PushCommand command = new PushCommand();
+        command.setContent("test" + "上线了");
+        command.setUid("23");
+        command.setType("1");
+        command.setPlatformType(PlatformType.all);
+        command.setAlias("23");
+        try {
+            pushService.pushUserNotice(command);
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 }

@@ -22,6 +22,7 @@ import cn.jpush.api.push.model.notification.IosNotification;
 import cn.jpush.api.push.model.notification.Notification;
 
 import com.xiaonei.db.utils.JedisPoolUtils;
+import com.xiaonei.db.utils.JsonUtils;
 import com.xiaonei.pojo.PlatformType;
 import com.xiaonei.pojo.PushCommand;
 
@@ -58,6 +59,69 @@ public class PushService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public PushResult pushUserMsg(PushCommand command) throws Exception {
+        PushPayload payload = buildPushMsg(command);
+        try {
+            PushResult result = client.sendPush(payload);
+            LOG.info("Got result - from uid:" + command.getUid() + result
+                    + " the command is:" + JsonUtils.toJSON(command));
+            return result;
+        } catch (APIConnectionException e) {
+            LOG.error("Connection error. Should retry later. ", e);
+            throw e;
+        } catch (APIRequestException e) {
+            LOG.error(
+                    "Error response from JPush server. Should review and fix it. ",
+                    e);
+            LOG.info("HTTP Status: " + e.getStatus());
+            LOG.info("Error Code: " + e.getErrorCode());
+            LOG.info("Error Message: " + e.getErrorMessage());
+            LOG.info("Msg ID: " + e.getMsgId());
+            throw e;
+        }
+    }
+
+    private PushPayload buildPushMsg(PushCommand command) {
+        Builder builder = PushPayload.newBuilder();
+
+        if (command != null) {
+            switch (command.getPlatformType()) {
+            case android:
+                builder.setPlatform(Platform.android());
+                break;
+            case ios:
+                builder.setPlatform(Platform.ios());
+                break;
+            default:
+                builder.setPlatform(Platform.android_ios());
+                break;
+            }
+
+            cn.jpush.api.push.model.audience.Audience.Builder andienceBuilder = Audience
+                    .newBuilder();
+            if (!StringUtils.isEmpty(command.getTag())) {
+                andienceBuilder.addAudienceTarget(AudienceTarget.tag(command
+                        .getTag().trim().split("#")));
+            }
+
+            if (!StringUtils.isEmpty(command.getAlias())) {
+                andienceBuilder.addAudienceTarget(AudienceTarget.alias(command
+                        .getAlias().trim().split("#")));
+            }
+
+            builder.setAudience(andienceBuilder.build());
+            Map<String, String> params = command.getOptions();
+            params.put("userid", command.getUid());
+            params.put("type", command.getType());
+            params.putAll(command.getOptions());
+
+            builder.setMessage(
+                    Message.newBuilder().setMsgContent(command.getContent())
+                            .addExtras(params).build()).build();
+        }
+        return builder.build();
     }
 
     public PushResult pushUserNotice(PushCommand command) throws Exception {
@@ -111,7 +175,7 @@ public class PushService {
             }
 
             builder.setAudience(andienceBuilder.build());
-            builder.setMessage(Message.content(command.getContent()));
+            // builder.setMessage(Message.content(command.getContent()));
 
             Map<String, String> params = command.getOptions();
             params.put("userid", command.getUid());

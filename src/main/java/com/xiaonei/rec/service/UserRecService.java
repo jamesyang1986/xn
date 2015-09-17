@@ -65,6 +65,7 @@ public class UserRecService {
         paramMap.put("id", targetId);
         List<XnUser> users2 = userDao.getCondition(paramMap);
         if (users2 == null || users2.size() == 0) {
+            logger.info("not user exists...user id:" + targetId);
             throw new RuntimeException("not user exists...user id:" + targetId);
         }
 
@@ -88,11 +89,16 @@ public class UserRecService {
         List<MatchResult> resultList = new ArrayList<MatchResult>();
         List<XnUser> users = userDao.getCondition(paramMap);
 
+        int originalSize = 0;
+        int filterNum = 0;
+
         if (!CollectionUtils.isEmpty(users)) {
             XnUser originalUser = users.get(0);
 
             UserPushSetting setting = originalUser.getPushSetting();
             if (setting == null || setting.getPush_flag() != 1) {
+                logger.info("the user setting is null or  push flag is not open:"
+                        + userId);
                 return resultList;
             }
 
@@ -115,13 +121,20 @@ public class UserRecService {
             List<XnUser> recUsers = userDao.getCondition(setting);
             Map<String, String> idMap = showDao.getShowIds(userId);
 
+            originalSize = (recUsers == null ? 0 : recUsers.size());
+            filterNum = 0;
+
             for (XnUser targetUser : recUsers) {
                 if (idMap != null
                         && idMap.containsKey(targetUser.getId() + "")
                         && Integer.parseInt(idMap.get(targetUser.getId() + "")) >= Constants.MAX_USER_REC_COUNT) {
+                    filterNum++;
                     continue;
                 }
-                resultList.add(calUserSim(originalUser, targetUser));
+                MatchResult result = calUserSim(originalUser, targetUser);
+                if (result != null && result.getScore() != 0) {
+                    resultList.add(result);
+                }
             }
 
             Collections.sort(resultList, new Comparator<MatchResult>() {
@@ -140,6 +153,9 @@ public class UserRecService {
             resultList = resultList.subList(0, maxNum);
         }
 
+        logger.info("gen rec result for uid:" + userId + " original size is:"
+                + originalSize + "filter size:" + filterNum
+                + " result size is:" + resultList.size());
         return resultList;
     }
 
@@ -163,6 +179,8 @@ public class UserRecService {
         simWords.put("tag_youfan", new HashMap<String, String>());
         simWords.put("tag_hunji", new HashMap<String, String>());
 
+        Map<String, Integer> countMap = new HashMap<String, Integer>();
+
         double score_aichi = 0.0;
         double score_aiwan = 0.0;
         double score_tinkan = 0.0;
@@ -170,18 +188,23 @@ public class UserRecService {
         double score_hunji = 0.0;
 
         if (originalUserTags != null && targetTags != null) {
-            score_aichi = getWordSimilarity(simWords.get("tag_aichi"),
+            score_aichi = getWordSimilarity("tag_aichi", countMap, simWords,
                     originalUserTags.getTag_aichi(), targetTags.getTag_aichi());
-            score_aiwan = getWordSimilarity(simWords.get("tag_aiwan"),
+            score_aiwan = getWordSimilarity("tag_aiwan", countMap, simWords,
                     originalUserTags.getTag_aiwan(), targetTags.getTag_aiwan());
-            score_tinkan = getWordSimilarity(simWords.get("tag_tingkan"),
+            score_tinkan = getWordSimilarity("tag_tingkan", countMap, simWords,
                     originalUserTags.getTag_tingkan(),
                     targetTags.getTag_tingkan());
-            score_youfan = getWordSimilarity(simWords.get("tag_youfan"),
+            score_youfan = getWordSimilarity("tag_youfan", countMap, simWords,
                     originalUserTags.getTag_youfan(),
                     targetTags.getTag_youfan());
-            score_hunji = getWordSimilarity(simWords.get("tag_hunji"),
+            score_hunji = getWordSimilarity("tag_hunji", countMap, simWords,
                     originalUserTags.getTag_hunji(), targetTags.getTag_hunji());
+        }
+
+        int sum = 0;
+        for (int val : countMap.values()) {
+            sum += val;
         }
 
         genSimWordList(result, simWords, "tag_aichi");
@@ -190,8 +213,17 @@ public class UserRecService {
         genSimWordList(result, simWords, "tag_youfan");
         genSimWordList(result, simWords, "tag_hunji");
 
-        result.setScore(score_aichi + score_aiwan + score_tinkan + score_youfan
-                + score_hunji);
+        double totalScore2 = score_aichi + score_aiwan + score_tinkan
+                + score_youfan + score_hunji;
+
+        double totalScore = ((countMap.get("tag_aichi") * 1.0 / sum)
+                * score_aichi + (countMap.get("tag_aiwan") * 1.0 / sum)
+                * score_aiwan + (countMap.get("tag_tingkan") * 1.0 / sum)
+                * score_tinkan + (countMap.get("tag_youfan") * 1.0 / sum)
+                * score_youfan + (countMap.get("tag_hunji") * 1.0 / sum)
+                * score_hunji) * 5;
+
+        result.setScore(totalScore);
 
         tagScoreMap.put("tag_aichi", score_aichi);
         tagScoreMap.put("tag_aiwan", score_aiwan);
@@ -244,24 +276,28 @@ public class UserRecService {
         }
     }
 
-    public double getWordSimilarity(Map<String, String> simWords,
-            String words1, String words2) {
-        if (StringUtils.isEmpty(words1) || StringUtils.isEmpty(words2)) {
-            return 0.0;
-        }
+    public double getWordSimilarity(String tagName,
+            Map<String, Integer> countMap,
+            Map<String, Map<String, String>> simWordsMap, String words1,
+            String words2) {
+        countMap.put(tagName, 0);
+
+        Map<String, String> simWords = simWordsMap.get(tagName);
+
         String[] tmp1 = new String[] {};
         String[] tmp2 = new String[] {};
 
-        if (words1.contains(",")) {
-            tmp1 = words1.split("\\,");
-        } else {
-            tmp1 = words1.split(Constants.WORD_SPLIT_CHAR);
+        tmp1 = words1.split(Constants.WORD_SPLIT_CHAR);
+        tmp2 = words2.split(Constants.WORD_SPLIT_CHAR);
+
+        if (ArrayUtils.isEmpty(tmp1) && !ArrayUtils.isEmpty(tmp2)) {
+            countMap.put(tagName, tmp2.length);
+            return 0.0;
         }
 
-        if (words2.contains(",")) {
-            tmp2 = words2.split("\\,");
-        } else {
-            tmp2 = words2.split(Constants.WORD_SPLIT_CHAR);
+        if (ArrayUtils.isEmpty(tmp2) && !ArrayUtils.isEmpty(tmp1)) {
+            countMap.put(tagName, tmp1.length);
+            return 0.0;
         }
 
         Set<String> wordSet = new HashSet<String>();
@@ -304,7 +340,10 @@ public class UserRecService {
                 totalSimValue += simValue;
             }
         }
-        return (totalSimValue / wordSet.size()) > 1.0 ? 1.0
-                : (totalSimValue / wordSet.size());
+
+        countMap.put(tagName, wordSet.size());
+        return wordSet.size() == 0 ? 0
+                : (totalSimValue / wordSet.size()) > 1.0 ? 1.0
+                        : (totalSimValue / wordSet.size());
     }
 }

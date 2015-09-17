@@ -24,8 +24,6 @@
       </listener-class>
    </listener>
    
-    
-    
 	<servlet>
 		<servlet-name>push</servlet-name>
 		<servlet-class>com.xiaonei.web.PushServlet</servlet-class>   <!--Servlet的类 -->
@@ -42,6 +40,15 @@
     <servlet-mapping>
         <servlet-name>notify</servlet-name>
         <url-pattern>/notify</url-pattern>                   <!--映射的url路径 -->
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>unread</servlet-name>
+        <servlet-class>com.xiaonei.web.UnReadServlet</servlet-class>   <!--Servlet的类 -->
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>unread</servlet-name>
+        <url-pattern>/unread</url-pattern>                   <!--映射的url路径 -->
     </servlet-mapping>
 
 	<servlet>
